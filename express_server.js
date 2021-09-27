@@ -14,3 +14,7 @@ app.get("/", (req, res) => { //registers a handler on the root path, "/".
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+
+app.get("/urls.json", (req, res) => {
+  res.json(urlDatabase);
+});
