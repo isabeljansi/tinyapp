@@ -10,5 +10,51 @@
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
     </div>
+
+    <% if(username){ %>
+      
+      <div>
+        
+        <form method="POST" action="/logout" > 
+          <label for="username">Logged in as: "<%= `${username}` %>" </label>
+          <style>
+            .button {
+              color: initial;
+              text-align: center;
+              display: inline-block;
+              font-size: 18px;
+              margin: 4px 2px;
+              cursor: pointer;
+            }
+            .button4 {background-color: #0a8f13; border-radius: 12px; border: 2px color initial} 
+            </style>
+            <button class="button button4"> Logout </button> </form>
+    </div>
+
+
+    <% } else{ %>  
+
+      <div>
+        <form method="POST" action="/login" > 
+          <input type="text" id="username" name="username" style="height:50px; width: 300px" placeholder= "Username" >
+          <style>
+            .button {
+              color: initial;
+              text-align: center;
+              display: inline-block;
+              font-size: 18px;
+              margin: 4px 2px;
+              cursor: pointer;
+            }
+            .button3 {background-color: #0a8f13; border-radius: 12px; border: 2px color initial} 
+            </style>
+            <button class="button button3"> Login </button> </form>
+    </div>
+
+ 
+
+
+
+      <% } %>
   </nav>
 </header>
