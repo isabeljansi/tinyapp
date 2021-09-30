@@ -18,6 +18,7 @@
           <th scope="col">Short URL</th>
           <th scope="col">Long URL</th>
           <th scope="col"></th>
+          <th scope="col"></th>
         </tr>
       </thead>
       <tbody>
@@ -25,22 +26,28 @@
           <tr> 
             <td><%= url %></td>
             <td><%= urls[url] %> </td>
-              <form method="POST" action="/urls/<%= url %>/delete">
-                <td> 
-                
+
+            
+            <td> <form method = "GET" action="/urls/<%= url %>">
+              <style>
+                .button {
+                  padding: 15px 32px;
+                  text-align: center;
+                  text-decoration: none;
+                  display: inline-block;
+                  font-size: 20px;
+                  margin: 4px 2px;
+                  cursor: pointer;
+                }
+                .button2 {border-color: #007bff; color: rgb(6, 126, 238); background-color: #fdfdfb; border-radius: 12px; border: 2px solid #0484ec} 
+                </style>
+                <button class="button button2"> Edit </button> </form>
+
+              </td> 
+              
+                <td> <form method="POST" action="/urls/<%= url %>/delete">
                 <style>
-                  .button {
-                    border-color: #ff0000;
-                    color: rgb(238, 6, 6);
-                    padding: 15px 32px;
-                    text-align: center;
-                    text-decoration: none;
-                    display: inline-block;
-                    font-size: 16px;
-                    margin: 4px 2px;
-                    cursor: pointer;
-                  }
-                  .button1 {background-color: #fdfdfb; border-radius: 12px; border: 2px solid #ff0000} 
+                  .button1 {border-color: #ff0000; color: rgb(238, 6, 6); background-color: #fdfdfb; border-radius: 12px; border: 2px solid #ff0000} 
                   </style>
                   <button class="button button1"> Delete </button>
 
