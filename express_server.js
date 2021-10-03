@@ -33,8 +33,8 @@ function generateRandomString() {
     return result;
 }
 
-
-app.get("/", (req, res) => { //registers a handler on the root path, "/".
+//registers a handler on the root path, "/".
+app.get("/", (req, res) => { 
   res.send("Hello!");
 });
 
@@ -59,32 +59,40 @@ app.get("/hello", (req, res) => {
 });
 
 
-
-
 app.get("/urls", (req, res) => {
   const id = req.cookies['user_id']
-  // console.log("id: " +id);
   const templateVars = { users, user: users[id], urls: urlDatabase };
-
+  if(!id){
+    res.redirect('/login');
+  } else
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
   const id = req.cookies['user_id']
   const templateVars = { users, user: users[id] };
+  if(!id){
+    res.redirect('/login');
+  }
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   const id = req.cookies['user_id']
   const templateVars = { users, user: users[id], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  if(!id){
+    res.redirect('/login');
+  }
   res.render("urls_show", templateVars);
 });
 
 //to get the login.ejs page
 app.get('/login', (req, res) => {
-
-  res.render('login');
+  const id = req.cookies['user_id']
+  if(id){
+    res.redirect('/urls');
+  }
+  res.render('login')
 });
 
 // app.post("/urls", (req, res) => {
@@ -94,40 +102,45 @@ app.get('/login', (req, res) => {
 
 //To create a new URL entry. Gives the long url a short id and updates the urlDatabase
 app.post("/urls", (req, res) => {
+  const id = req.cookies['user_id']
+  if(!id){
+    res.redirect('/login');
+  }
   const longURL = req.body.longURL
   const shortURL = generateRandomString(); 
+
   urlDatabase[shortURL] = longURL; //adds  the key value pair to the urlDatabase
   res.redirect(`/urls/${shortURL}`);
 });
 
 //page of the shortURL
 app.get("/u/:shortURL", (req, res) => {
-  // console.log(req.params);
-  // console.log(req.params.shortURL)
-  // console.log(urlDatabase[req.params.shortURL]);
+  const id = req.cookies['user_id']
+  if(!id){
+    res.redirect('/login');
+  }
   const longURL = urlDatabase[req.params.shortURL]
-  //console.log(longURL)
   res.redirect(longURL);
 });
 
 //to delete a URL
 app.post("/urls/:shortURL/delete", (req, res) => {
-  //console.log(req.params.shortURL)
     delete urlDatabase[req.params.shortURL];
   res.redirect(`/urls/`);
 });
 
 //gets the page when edit is clicked
 app.get("/urls/:shortURL", (req, res) => {
-  // console.log(" Foo 5 : " + req.body)
   const id = req.cookies['user_id']
   const templateVars = { users, user: users[id], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  if(!id){
+    res.redirect('/login');
+  }
   res.render("urls_show", templateVars);
 });
 
 //submitting after editing the link
 app.post("/urls/:shortURL", (req, res) => {
-  //console.log(req.body);
   const shortURL = req.params.shortURL
   urlDatabase[shortURL] = req.body.longURL;
   res.redirect(`/urls/${shortURL}`);
@@ -146,19 +159,15 @@ function getKeyByValue(object, email) {
 
 //logins to the form
 app.post("/login", (req, res) => {
-   // Insert Login Code Here
    const email = req.body.email;
    const password = req.body.password
-    // console.log(" Foo 3 email:" + email)
-    // console.log("Foo 4 password: " +password)
   
-   if(emailLookUp(email) === false) {
+   if(emailLookUp(users, email) === false) {
     return res.send(`<h1> Error:403 User does not exist. Please <a href = "http://localhost:8080/register"> Register</a> </h1>`);
   }
 
-  if(emailLookUp(email) === true) {
+  if(emailLookUp(users, email) === true) {
     const id = getKeyByValue(users, email);
-    // console.log("Foo 2 id: " + id);
     const user = users[id];
     if(password !== user.password){
       return res.send(`<h1> Error:400 Password does not match. Please <a href = "http://localhost:8080/login">Login</a> again or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
@@ -167,11 +176,8 @@ app.post("/login", (req, res) => {
     res.cookie("user_id", id);
     res.redirect(`/urls`);
   }
-   //res.cookie('username', username)
-   //users[id] = {id: id, email: email, password: password}
 
 });
-
 
 
 //execute the logout and clears the cookies
@@ -179,16 +185,18 @@ app.post("/logout", (req, res) => {
   // Insert Login Code Here
   const email = req.body.email;
   const id = getKeyByValue(users, email);
-  //res.clearCookie('username', username)
   res.clearCookie('user_id', id)
   res.redirect(`/urls`);
 });
 
+//gets the register page
 app.get('/register', (req, res) => {
-
+  const id = req.cookies['user_id']
+  if(id){
+    res.redirect('/login');
+  }
   res.render('register');
 });
-
 
 
 //posts to the register page
@@ -197,24 +205,18 @@ app.post('/register', (req, res) => {
   const id = userId;
   const email = req.body.email;
   const password = req.body.password;
-  //console.log(`id: ${id}, email: ${email}, password: ${password}`)
 
   if(email === "" || password === ""){
     res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/register"> Register</a> with an Email and Password.</h1>`);
-   // res.redirect('/register');
     return;
   }
 
   const emailFound = emailLookUp(users, email);
-  // console.log("Foo 1 emailFound : " +emailFound)
-
   if(emailFound === true){
     return res.send(`<h1> Error:400 User already exists. Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> with a different Email.</h1>`);
   }
   else {
     users[userId] = {id:id, email:email, password:password};
-    // console.log(users);
-    // console.log(users[userId]);
     res.cookie('user_id', id)
     res.redirect('urls');
   }
