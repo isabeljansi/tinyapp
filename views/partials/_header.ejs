@@ -11,12 +11,21 @@
       </div>
     </div>
 
-    <% if(username){ %>
+    <% if(!user){ %>
+
+      <h4> <a href = "http://localhost:8080/login"><b>Login</b></a> to your account / </h4>
+
+      <h4> <a href = "http://localhost:8080/register"><b> Register</b></a> new account</h4>
       
+    
+
+
+    <% } else{ %>  
+
       <div>
         
         <form method="POST" action="/logout" > 
-          <label for="username">Logged in as: "<%= `${username}` %>" </label>
+          <label for="email">Logged in as: "<%= `${user.email}` %>" </label>
           <style>
             .button {
               color: initial;
@@ -32,29 +41,7 @@
     </div>
 
 
-    <% } else{ %>  
-
-      <div>
-        <form method="POST" action="/login" > 
-          <input type="text" id="username" name="username" style="height:50px; width: 300px" placeholder= "Username" >
-          <style>
-            .button {
-              color: initial;
-              text-align: center;
-              display: inline-block;
-              font-size: 18px;
-              margin: 4px 2px;
-              cursor: pointer;
-            }
-            .button3 {background-color: #0a8f13; border-radius: 12px; border: 2px color initial} 
-            </style>
-            <button class="button button3"> Login </button> </form>
-    </div>
-
- 
-
-
-
       <% } %>
+      
   </nav>
 </header>
