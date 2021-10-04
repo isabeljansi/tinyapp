@@ -3,15 +3,14 @@ const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs") //tells the Express app to use EJS as its templating engine
 
-// const cookieParser = require('cookie-parser')
-// app.use(cookieParser())
-
 let cookieSession = require('cookie-session')
 
 app.use(cookieSession({
   name: 'session',
   keys: ["CookieSessionTestingForIsabelJansi"],
 }))
+
+const getUserByEmail = require("./helpers");
 
 const bcrypt = require('bcryptjs');
 
@@ -187,27 +186,18 @@ function getKeyByValue(object, email) {
   return false;
 }
 
-//function to check if email exists in the user database
-const getUserByEmail = function(users, email) {
-  const nestObject = Object.values(users);
-  for (const item of nestObject) {
-    if(item.email === email) {
-     return true;
-    }
-  } 
-  return false;
-}
+
 
 //logins to the form
 app.post("/login", (req, res) => {
    const email = req.body.email;
    const password = req.body.password;
 
-   if(getUserByEmail(users, email) === false) {
+   if(getUserByEmail.getUserByEmail(users, email) === false) {
     return res.send(`<h1> Error:403 User does not exist. Please <a href = "http://localhost:8080/register"> Register</a> </h1>`);
   }
 
-  if(getUserByEmail(users, email) === true) {
+  if(getUserByEmail.getUserByEmail(users, email) === true) {
     const id = getKeyByValue(users, email);
     const user = users[id];
     if(!bcrypt.compareSync(`${password}`, user.password)){
@@ -249,7 +239,7 @@ app.post('/register', (req, res) => {
     return;
   }
 
-  const emailFound = getUserByEmail(users, email);
+  const emailFound = getUserByEmail.getUserByEmail(users, email);
   if(emailFound === true){
     return res.send(`<h1> Error:400 User already exists. Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> with a different Email.</h1>`);
   }
