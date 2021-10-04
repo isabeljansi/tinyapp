@@ -3,8 +3,15 @@ const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs") //tells the Express app to use EJS as its templating engine
 
-const cookieParser = require('cookie-parser')
-app.use(cookieParser())
+// const cookieParser = require('cookie-parser')
+// app.use(cookieParser())
+
+let cookieSession = require('cookie-session')
+
+app.use(cookieSession({
+  name: 'session',
+  keys: ["CookieSessionTestingForIsabelJansi"],
+}))
 
 const bcrypt = require('bcryptjs');
 
@@ -66,34 +73,31 @@ app.get("/hello", (req, res) => {
 });
 
 
-//returns an object the URLs where the userID is equal to the id of the currently logged-in user
+//returns an object with the URLs where the userID is equal to the id of the currently logged-in user
 function urlsForUser(id){
-
   const results ={};
   const keys = Object.keys(urlDatabase); //array
-  
   for(const shortURL of keys){
     const url = urlDatabase[shortURL];
-    if(url.userID === id) {
+
+    if(url.userID === id){
       results[shortURL] = url;
-    }
+    } 
   }
   return results;
-};
+}
 
 app.get("/urls", (req, res) => {
-  const id = req.cookies['user_id'];
-  //const templateVars = { users, user: users[id], urls: urlDatabase[id], urlsUser};
+  const id = req.session.user_id;
   if(!id){
     return res.redirect('/login');
   } 
-  const urls = urlsForUser(id);
-  const templateVars = { user: users[id], urls: urls};
+  const templateVars = { user: users[id], urls: urlsForUser(id)};
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  const id = req.cookies['user_id']
+  const id = req.session.user_id;
   
   if(!id){
     return res.redirect('/login');
@@ -103,7 +107,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const id = req.cookies['user_id']
+  const id = req.session.user_id;
   if(!id){
     return res.redirect('/login');
   }
@@ -113,11 +117,12 @@ app.get("/urls/:shortURL", (req, res) => {
 
 //to get the login.ejs page
 app.get('/login', (req, res) => {
-  const id = req.cookies['user_id']
+  const id = req.session.user_id;
   if(id){
     return res.redirect('/urls');
   } 
-  res.render('login')
+  const templateVars = { urls: urlDatabase, user: users[id] };
+  res.render('login',templateVars)
 });
 
 // app.post("/urls", (req, res) => {
@@ -127,23 +132,20 @@ app.get('/login', (req, res) => {
 
 //To create a new URL entry. Gives the long url a short id and updates the urlDatabase
 app.post("/urls", (req, res) => {
-  const id = req.cookies['user_id']
+  const id = req.session.user_id;
   if(!id){
     return res.redirect('/login');
   }
   const longURL = req.body.longURL
-  //console.log(longURL);
   const shortURL = generateRandomString(); 
-  //console.log(shortURL);
   
-  urlDatabase[shortURL] = {longURL: longURL, id: id}; //adds  the key value pair to the urlDatabase
-  //console.log(urlDatabase[shortURL].longURL);
+  urlDatabase[shortURL] = {longURL: longURL, userID: id}; //adds  the key value pair to the urlDatabase
   res.redirect(`/urls/${shortURL}`);
 });
 
 //page of the shortURL
 app.get("/u/:shortURL", (req, res) => {
-  const id = req.cookies['user_id']
+  const id = req.session.user_id;
   if(!id){
     return res.redirect(`/${longURL}`);
   }
@@ -159,7 +161,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 //gets the page when edit is clicked
 app.get("/urls/:shortURL", (req, res) => {
-  const id = req.cookies['user_id']
+  const id = req.session.user_id;
   if(!id){
     return res.redirect('/login');
   }
@@ -185,22 +187,33 @@ function getKeyByValue(object, email) {
   return false;
 }
 
+//function to check if email exists in the user database
+const getUserByEmail = function(users, email) {
+  const nestObject = Object.values(users);
+  for (const item of nestObject) {
+    if(item.email === email) {
+     return true;
+    }
+  } 
+  return false;
+}
+
 //logins to the form
 app.post("/login", (req, res) => {
    const email = req.body.email;
    const password = req.body.password;
 
-   if(emailLookUp(users, email) === false) {
+   if(getUserByEmail(users, email) === false) {
     return res.send(`<h1> Error:403 User does not exist. Please <a href = "http://localhost:8080/register"> Register</a> </h1>`);
   }
 
-  if(emailLookUp(users, email) === true) {
+  if(getUserByEmail(users, email) === true) {
     const id = getKeyByValue(users, email);
     const user = users[id];
     if(!bcrypt.compareSync(`${password}`, user.password)){
       return res.send(`<h1> Error:400 Password does not match. Please <a href = "http://localhost:8080/login">Login</a> again or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
     }
-    res.cookie("user_id", id);
+    req.session.user_id = id;
     res.redirect(`/urls`);
   }
 
@@ -209,21 +222,17 @@ app.post("/login", (req, res) => {
 
 //execute the logout and clears the cookies
 app.post("/logout", (req, res) => {
-  // Insert Login Code Here
-  const email = req.body.email;
-  const id = getKeyByValue(users, email);
-  res.clearCookie('user_id', id)
+  req.session.user_id = null //destroys the cookie
   res.redirect(`/urls`);
 });
 
 //gets the register page
 app.get('/register', (req, res) => {
-  const id = req.cookies['user_id']
+  const id = req.session.user_id;
   if(id){
     return res.redirect('/login');
   } 
     res.render('register');
-  
 });
 
 
@@ -234,29 +243,21 @@ app.post('/register', (req, res) => {
   const email = req.body.email;
   const password = bcrypt.hashSync(`${req.body.password}`, 10);
 
+
   if(email === "" || password === ""){
     res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/register"> Register</a> with an Email and Password.</h1>`);
     return;
   }
 
-  const emailFound = emailLookUp(users, email);
+  const emailFound = getUserByEmail(users, email);
   if(emailFound === true){
     return res.send(`<h1> Error:400 User already exists. Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> with a different Email.</h1>`);
   }
   else {
     users[userId] = {id:id, email:email, password:password};
-    res.cookie('user_id', id)
+    // res.cookie('user_id', id)
+    req.session.user_id = `${id}`;
     res.redirect('urls');
   }
 });
 
-//function to check if email exists in the user database
-function emailLookUp(object, email) {
-  const nestObject = Object.values(object);
-  for (const item of nestObject) {
-    if(item.email === email) {
-     return true;
-    }
-  } 
-  return false;
-}
