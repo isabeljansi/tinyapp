@@ -6,6 +6,8 @@ app.set("view engine", "ejs") //tells the Express app to use EJS as its templati
 const cookieParser = require('cookie-parser')
 app.use(cookieParser())
 
+const bcrypt = require('bcryptjs');
+
 const users = { 
   "userRandomID": {
     id: "userRandomID", 
@@ -186,8 +188,8 @@ function getKeyByValue(object, email) {
 //logins to the form
 app.post("/login", (req, res) => {
    const email = req.body.email;
-   const password = req.body.password
-  
+   const password = req.body.password;
+
    if(emailLookUp(users, email) === false) {
     return res.send(`<h1> Error:403 User does not exist. Please <a href = "http://localhost:8080/register"> Register</a> </h1>`);
   }
@@ -195,10 +197,9 @@ app.post("/login", (req, res) => {
   if(emailLookUp(users, email) === true) {
     const id = getKeyByValue(users, email);
     const user = users[id];
-    if(password !== user.password){
+    if(!bcrypt.compareSync(`${password}`, user.password)){
       return res.send(`<h1> Error:400 Password does not match. Please <a href = "http://localhost:8080/login">Login</a> again or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
     }
-
     res.cookie("user_id", id);
     res.redirect(`/urls`);
   }
@@ -231,7 +232,7 @@ app.post('/register', (req, res) => {
   const userId = generateRandomString();
   const id = userId;
   const email = req.body.email;
-  const password = req.body.password;
+  const password = bcrypt.hashSync(`${req.body.password}`, 10);
 
   if(email === "" || password === ""){
     res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/register"> Register</a> with an Email and Password.</h1>`);
