@@ -3,12 +3,19 @@ const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs") //tells the Express app to use EJS as its templating engine
 
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}!`);
+});
+
 let cookieSession = require('cookie-session')
 
 app.use(cookieSession({
   name: 'session',
   keys: ["CookieSessionTestingForIsabelJansi"],
 }))
+
+const bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({extended: true}));
 
 const getUserByEmail = require("./helpers");
 
@@ -49,15 +56,12 @@ function generateRandomString() {
 
 //registers a handler on the root path, "/".
 app.get("/", (req, res) => { 
-  res.send("Hello!");
+  const id = req.session.user_id;
+  if(!id){
+    return res.redirect('/login');
+  } 
+  res.redirect('/urls');
 });
-
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
-});
-
-const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({extended: true}));
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
@@ -86,32 +90,24 @@ function urlsForUser(id){
   return results;
 }
 
+//lists the urls of the logged in user
 app.get("/urls", (req, res) => {
   const id = req.session.user_id;
   if(!id){
-    return res.redirect('/login');
+    res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
   } 
   const templateVars = { user: users[id], urls: urlsForUser(id)};
   res.render("urls_index", templateVars);
 });
 
+//create new urls page 
 app.get("/urls/new", (req, res) => {
   const id = req.session.user_id;
-  
   if(!id){
     return res.redirect('/login');
   } 
   const templateVars = { users, user: users[id] };
   res.render("urls_new", templateVars);
-});
-
-app.get("/urls/:shortURL", (req, res) => {
-  const id = req.session.user_id;
-  if(!id){
-    return res.redirect('/login');
-  }
-  const templateVars = { users, user: users[id], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
-  res.render("urls_show", templateVars);
 });
 
 //to get the login.ejs page
@@ -124,16 +120,11 @@ app.get('/login', (req, res) => {
   res.render('login',templateVars)
 });
 
-// app.post("/urls", (req, res) => {
-//   console.log(req.body);  // Log the POST request body to the console
-//   res.send("Ok");         // Respond with 'Ok' (we will replace this)
-// });
-
 //To create a new URL entry. Gives the long url a short id and updates the urlDatabase
 app.post("/urls", (req, res) => {
   const id = req.session.user_id;
   if(!id){
-    return res.redirect('/login');
+    return res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
   }
   const longURL = req.body.longURL
   const shortURL = generateRandomString(); 
@@ -154,6 +145,10 @@ app.get("/u/:shortURL", (req, res) => {
 
 //to delete a URL
 app.post("/urls/:shortURL/delete", (req, res) => {
+  const id = req.session.user_id;
+  if(!id){
+    return res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
+  }
     delete urlDatabase[req.params.shortURL];
   res.redirect(`/urls/`);
 });
@@ -161,8 +156,16 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 //gets the page when edit is clicked
 app.get("/urls/:shortURL", (req, res) => {
   const id = req.session.user_id;
+
   if(!id){
-    return res.redirect('/login');
+    return res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
+  }
+
+  // check if the url belongs to the logged in user's database. 
+  // if it does not belong to user post a html error page.
+ 
+  if(id !== urlDatabase[req.params.shortURL].userID){
+    return res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
   }
   const templateVars = { users, user: users[id], shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL };
   res.render("urls_show", templateVars);
@@ -170,9 +173,13 @@ app.get("/urls/:shortURL", (req, res) => {
 
 //submitting after editing the link
 app.post("/urls/:shortURL", (req, res) => {
+  const id = req.session.user_id;
+  if(!id){
+    return res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
+  }
   const shortURL = req.params.shortURL
   urlDatabase[shortURL].longURL = req.body.longURL;
-  res.redirect(`/urls/${shortURL}`);
+  return res.redirect('/urls');
 });
 
 // loops through the nested user object to find the key of the email value
@@ -185,8 +192,6 @@ function getKeyByValue(object, email) {
   }
   return false;
 }
-
-
 
 //logins to the form
 app.post("/login", (req, res) => {
@@ -210,12 +215,6 @@ app.post("/login", (req, res) => {
 });
 
 
-//execute the logout and clears the cookies
-app.post("/logout", (req, res) => {
-  req.session.user_id = null //destroys the cookie
-  res.redirect(`/urls`);
-});
-
 //gets the register page
 app.get('/register', (req, res) => {
   const id = req.session.user_id;
@@ -233,9 +232,13 @@ app.post('/register', (req, res) => {
   const email = req.body.email;
   const password = bcrypt.hashSync(`${req.body.password}`, 10);
 
+  if(req.body.password === ""){
+    res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/register"> Register</a> with a valid Email and Password.</h1>`);
+    return;
+  }
 
   if(email === "" || password === ""){
-    res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/register"> Register</a> with an Email and Password.</h1>`);
+    res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/register"> Register</a> with a valid Email and Password.</h1>`);
     return;
   }
 
@@ -245,9 +248,16 @@ app.post('/register', (req, res) => {
   }
   else {
     users[userId] = {id:id, email:email, password:password};
-    // res.cookie('user_id', id)
     req.session.user_id = `${id}`;
     res.redirect('urls');
   }
+
+
+  //execute the logout and clears the cookies
+app.post("/logout", (req, res) => {
+  req.session.user_id = null //destroys the cookie
+  res.redirect('/login');
+});
+
 });
 
