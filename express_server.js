@@ -104,8 +104,7 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   const id = req.session.user_id;
   if(!id){
-    res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
-
+    return res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
   } 
   const templateVars = { users, user: users[id] };
   res.render("urls_new", templateVars);
@@ -137,10 +136,10 @@ app.post("/urls", (req, res) => {
 //page of the shortURL
 app.get("/u/:shortURL", (req, res) => {
   const id = req.session.user_id;
-  if(!id){
-    return res.redirect(`/${longURL}`);
-  }
   const longURL = urlDatabase[req.params.shortURL].longURL
+  if(!id){
+    return res.redirect(longURL);
+  }
   res.redirect(longURL);
 });
 
