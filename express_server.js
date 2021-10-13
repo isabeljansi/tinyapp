@@ -104,7 +104,8 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   const id = req.session.user_id;
   if(!id){
-    return res.redirect('/login');
+    res.send(`<h1> Error:400 Please <a href = "http://localhost:8080/login">Login</a> or <a href = "http://localhost:8080/register"> Register</a> a new account.</h1>`);
+
   } 
   const templateVars = { users, user: users[id] };
   res.render("urls_new", templateVars);
